@@ -102,7 +102,8 @@ def register_save(request):
         if "password" in form.errors.as_data():
             text_error = str(form.errors["password"][0])
             return HttpResponse("password_error", headers={"status": text_error})
-        return HttpResponse("unknown_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("unknown_error",
+                                       headers={"status": "Application error. Please contact support."})
 
 
 @csrf_exempt
@@ -137,7 +138,8 @@ def logout(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     user = user[0]
     user.token = None
     user.save()
@@ -170,7 +172,8 @@ def password_recovery_save(request):
     email = request.POST.get("email")
     user = Authentication.objects.filter(email=email)
     if not user.exists():
-        return HttpResponse("email_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("email_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     user = user[0]
     password = request.POST.get("password")
     if len(password) < 6:
@@ -201,7 +204,8 @@ def upload_file(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     user = user[0]
     user_id = user.id
     query_dict = request.POST.copy()
@@ -261,13 +265,15 @@ def upload_file(request):
         get_screenshot(file_info)
         analyzed_segment_len = int(request.POST.get("analyzed_segment_len"))
         if not file_processing(file_info, user, analyzed_segment_len=analyzed_segment_len):
-            return HttpResponse("analysis_error", headers={"status": "Application error. Please contact support."})
+            return HttpResponseServerError("analysis_error", headers={"status": "Application error. Please contact "
+                                                                                "support."})
         return HttpResponse(str(file_id), headers={"status": operation_completed_successfully})
     elif "filename" in form.errors.as_data():
         return HttpResponse("filename_error", headers={"status": str(form.errors["filename"][0])})
     else:
         logger.debug("File uploading errors: " + str(form.errors.as_data()))
-        return HttpResponse("parsing_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("parsing_error",
+                                       headers={"status": "Application error. Please contact support."})
 
 
 @csrf_exempt
@@ -280,7 +286,8 @@ def archive_number_of_files(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error", headers={"status": "Application error. Please contact "
+                                                                                   "support."})
     user_id = user[0].id
     files = FileInfo.objects.filter(user_id=user_id)
     file_ids = [file.id for file in files]
@@ -299,14 +306,16 @@ def archive_file_info(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error", headers={"status": "Application error. Please contact "
+                                                                                   "support."})
     file = FileInfo.objects.filter(id=request.POST.get("file_id"))
     if not file.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error", headers={"status": "Application error. Please contact "
+                                                                                  "support."})
     file = file[0]
     if user[0].id != file.user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
     file_info = {"filename": file.filename, "datetime": file.register_date.strftime("%Y:%m:%d %H:%M:%S")}
     logger.debug("file info: " + str(file_info))
     return HttpResponse(json.dumps(file_info), headers={"status": operation_completed_successfully})
@@ -322,14 +331,16 @@ def archive_file_image(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = FileInfo.objects.filter(id=request.POST.get("file_id"))
     if not file.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = file[0]
     if user[0].id != file.user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
     path = file.file.path
     image_path = path[:path.rfind('.')] + '.png'
     return FileResponse(open(image_path, "rb"), headers={"status": operation_completed_successfully})
@@ -346,13 +357,15 @@ def video_file(request):
     file_id = request.POST.get("file_id")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = FileInfo.objects.filter(id=file_id)
     if not file.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     if user[0].id != file[0].user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
     path = file[0].file.path
     return FileResponse(open(path, "rb"), headers={"status": operation_completed_successfully})
 
@@ -368,14 +381,16 @@ def delete_file(request):
     file_id = request.POST.get("file_id")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = FileInfo.objects.filter(id=file_id)
     if not file.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     user = user[0]
     if user.id != file[0].user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = file[0]
     file_id = file.id
     path = file.file.path
@@ -421,13 +436,15 @@ def file_statistics(request):
     file_id = request.POST.get("file_id")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file_info = FileInfo.objects.filter(id=file_id)
     if not file_info.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     if user[0].id != file_info[0].user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = file_info[0]
     # Transform real numbers to text grades according to limit values
     data = model_to_dict(file, fields=fields)
@@ -469,7 +486,8 @@ def statistics(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
 
     all_data, ids_lst = get_user_stats(user[0].id)
     data = dict()
@@ -508,7 +526,8 @@ def user_recommendations_description(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     data, _ = get_user_stats(user[0].id)
     for key in data:
         if len(data[key]) == 0:
@@ -546,7 +565,8 @@ def user_recommendations_sample(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
 
     user = user[0]
     file_id = user.best_file_num
@@ -577,14 +597,16 @@ def file_recommendations_description(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = FileInfo.objects.filter(id=request.POST.get("file_id"))
     if not file.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = file[0]
     if user[0].id != file.user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
 
     data = {}
     analysis = model_to_dict(file)
@@ -634,14 +656,16 @@ def file_recommendations_sample(request):
     token = request.POST.get("token")
     user = Authentication.objects.filter(token=token)
     if not user.exists():
-        return HttpResponse("token_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("token_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = FileInfo.objects.filter(id=request.POST.get("file_id"))
     if not file.exists():
-        return HttpResponse("file_not_found_error", headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_not_found_error",
+                                       headers={"status": "Application error. Please contact support."})
     file = file[0]
     if user[0].id != file.user_id.id:
-        return HttpResponse("file_and_token_do_not_match_error",
-                            headers={"status": "Application error. Please contact support."})
+        return HttpResponseServerError("file_and_token_do_not_match_error",
+                                       headers={"status": "Application error. Please contact support."})
     segment_num = file.best_segment_num
     length = file.analyzed_segment_len
 
@@ -663,31 +687,36 @@ def file_processing(file: FileInfo, user: Authentication, analyzed_segment_len=1
     @param analyzed_segment_len: length of segment (in seconds) to analyze
     @return: True if analysis is successful, False if errors occurred
     """
-    file_process = FileProcessingSystem(file, analyzed_segment_len=analyzed_segment_len, language_flag=language_flag)
-    if file.emotionality_flag:
-        file_process.get_emotionality()
-    if file.gestures_flag:
-        file_process.get_gestures()
-    if file.clothes_flag:
-        file_process.get_clothes()
-    if file.angle_flag:
-        file_process.get_incorrect_angle()
-    if file.glances_flag:
-        file_process.get_incorrect_glances()
-    if file.clean_speech_flag or file.speech_rate_flag or file.background_noise_flag or file.intelligibility_flag:
-        file_process.get_transcription()
-        if file.background_noise_flag:
-            file_process.get_background_noise()
-        if file.speech_rate_flag:
-            file_process.get_speech_rate()
-        if file.clean_speech_flag:
-            file_process.get_filler_words()
-        if file.intelligibility_flag:
-            file_process.get_intelligibility()
-    # search for best interval in file
-    save_best_interval(file, user)
-    # draw signatures
-    file_process.draw()
+    try:
+        file_process = FileProcessingSystem(file, analyzed_segment_len=analyzed_segment_len,
+                                            language_flag=language_flag)
+        if file.emotionality_flag:
+            file_process.get_emotionality()
+        if file.gestures_flag:
+            file_process.get_gestures()
+        if file.clothes_flag:
+            file_process.get_clothes()
+        if file.angle_flag:
+            file_process.get_incorrect_angle()
+        if file.glances_flag:
+            file_process.get_incorrect_glances()
+        if file.clean_speech_flag or file.speech_rate_flag or file.background_noise_flag or file.intelligibility_flag:
+            file_process.get_transcription()
+            if file.background_noise_flag:
+                file_process.get_background_noise()
+            if file.speech_rate_flag:
+                file_process.get_speech_rate()
+            if file.clean_speech_flag:
+                file_process.get_filler_words()
+            if file.intelligibility_flag:
+                file_process.get_intelligibility()
+        # search for best interval in file
+        save_best_interval(file, user)
+        # draw signatures
+        file_process.draw()
+    except Exception as e:
+        logger.debug("File processing error: " + str(e.args))
+        return False
     return True
 
 
